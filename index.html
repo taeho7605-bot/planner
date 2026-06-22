@@ -633,11 +633,77 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ===== 알림 =====
+function requestNotifyPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendNotification(title, body) {
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '📋' });
+  }
+}
+
+function scheduleAlarms() {
+  const now = new Date();
+  const todayKey = todayStr();
+
+  // 내일 날짜 키
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+
+  // ① 하루 전 아침 8시 알림 — 지금이 오늘이고 아직 8시 안 됐으면 예약
+  const morningAlarm = new Date(now);
+  morningAlarm.setHours(8, 0, 0, 0);
+  const tomorrowEvents = state.events[tomorrowKey] || [];
+  if (tomorrowEvents.length > 0 && now < morningAlarm) {
+    const delay = morningAlarm - now;
+    setTimeout(() => {
+      const evs = state.events[tomorrowKey] || [];
+      if (evs.length > 0) {
+        const list = evs.sort((a,b) => a.time.localeCompare(b.time)).map(e => `${e.time ? e.time+' ' : ''}${e.title}`).join(', ');
+        sendNotification('📅 내일 일정 알림', `내일 일정: ${list}`);
+      }
+    }, delay);
+  }
+
+  // ② 각 일정 1시간 전 알림
+  const allKeys = Object.keys(state.events);
+  allKeys.forEach(dateKey => {
+    const evs = state.events[dateKey] || [];
+    const [y, m, d] = dateKey.split('-').map(Number);
+    evs.forEach(ev => {
+      if (!ev.time) return;
+      const [hh, mm] = ev.time.split(':').map(Number);
+      const evTime = new Date(y, m-1, d, hh, mm, 0);
+      const alarmTime = new Date(evTime.getTime() - 60 * 60 * 1000); // 1시간 전
+      const delay = alarmTime - now;
+      if (delay > 0 && delay < 24 * 60 * 60 * 1000) { // 24시간 이내만 예약
+        setTimeout(() => {
+          sendNotification('⏰ 1시간 후 일정', `${ev.time} ${ev.title} 시작까지 1시간 남았어요!`);
+        }, delay);
+      }
+    });
+  });
+}
+
+// 1분마다 알림 스케줄 갱신 (새 일정 추가 반영)
+function startAlarmScheduler() {
+  requestNotifyPermission();
+  scheduleAlarms();
+  setInterval(scheduleAlarms, 60 * 1000);
+}
+
 // 초기화
 renderCal();
 renderTodoDateOpts();
 updateStats();
 renderPomoUI();
+startAlarmScheduler();
 </script>
 </body>
 </html>
