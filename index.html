@@ -10,6 +10,9 @@
 <meta name="theme-color" content="#8B6F47">
 <link rel="manifest" href="manifest.json">
 <title>태호의 플래너</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -34,9 +37,17 @@
   }
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
   .app{max-width:1000px;margin:0 auto;padding:20px;display:flex;flex-direction:column}
-  .app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;background:var(--bg);border-radius:var(--radius-lg);padding:16px 20px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(139,111,71,0.08)}
+  .app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;background:var(--bg);border-radius:var(--radius-lg);padding:14px 20px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(139,111,71,0.08)}
+  .app-header-left{display:flex;flex-direction:column;gap:2px}
   .app-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--accent)}
   .app-date{font-size:12px;color:var(--text2)}
+  .header-today-events{display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:320px}
+  .header-today-label{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:0.05em}
+  .header-ev-chips{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+  .header-ev-chip{font-size:11px;padding:3px 8px;border-radius:99px;font-weight:500;white-space:nowrap}
+  .header-ev-chip.ev{background:var(--accent-bg);color:var(--accent);border:1px solid var(--border2)}
+  .header-ev-chip.todo{background:var(--green-bg);color:var(--green2);border:1px solid var(--border2)}
+  .header-no-events{font-size:11px;color:var(--text3)}
   .card{background:var(--bg);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(139,111,71,0.06)}
   .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
   .tab{padding:13px 22px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap}
@@ -312,8 +323,11 @@
 <body>
 <div class="app">
   <div class="app-header">
-    <div class="app-title">📋 태호의 플래너</div>
-    <div class="app-date" id="header-date"></div>
+    <div class="app-header-left">
+      <div class="app-title">📋 태호의 플래너</div>
+      <div class="app-date" id="header-date"></div>
+    </div>
+    <div class="header-today-events" id="header-today-events"></div>
   </div>
   <div class="card">
     <div class="tabs">
@@ -491,9 +505,7 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<!-- Firebase 초기화 -->
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyBmil5Hyc9KHriy8cQYBwMwEvCn-fYaSTU",
@@ -503,34 +515,38 @@ const firebaseConfig = {
   messagingSenderId: "162463354480",
   appId: "1:162463354480:web:acf31fa23db64a6635eeb5"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const DOC_REF = db.collection('users').doc('taeho');
-window._fbLoaded = false;
-window._fbInit = function() {
-  DOC_REF.onSnapshot((snap) => {
-    if (snap.exists) {
-      const data = snap.data();
-      if (data && data.state) {
-        const remote = JSON.parse(data.state);
-        Object.assign(state, remote);
-        if (window._fbLoaded) {
-          renderCal();
-          renderTodoDateOpts();
-          renderTodoList();
-          updateStats();
-          if (document.getElementById('view-week').style.display !== 'none') renderWeek();
-          if (document.getElementById('view-routine').style.display !== 'none') renderRoutine();
+
+window.addEventListener('load', function() {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const DOC_REF = db.collection('users').doc('taeho');
+    window._fbLoaded = false;
+    DOC_REF.onSnapshot((snap) => {
+      if (snap.exists) {
+        const data = snap.data();
+        if (data && data.state) {
+          const remote = JSON.parse(data.state);
+          Object.assign(state, remote);
+          if (window._fbLoaded) {
+            renderCal();
+            renderTodoDateOpts();
+            renderTodoList();
+            updateStats();
+            renderHeaderEvents();
+            if (document.getElementById('view-week').style.display !== 'none') renderWeek();
+            if (document.getElementById('view-routine').style.display !== 'none') renderRoutine();
+          }
         }
       }
-    }
-    window._fbLoaded = true;
-  });
-  window._fbSave = () => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
-    DOC_REF.set({ state: JSON.stringify(state) }, { merge: true }).catch(e => console.warn('FB save err', e));
-  };
-};
+      window._fbLoaded = true;
+    });
+    window._fbSave = () => {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+      DOC_REF.set({ state: JSON.stringify(state) }, { merge: true }).catch(e => console.warn('FB save err', e));
+    };
+  } catch(e) { console.warn('Firebase init error:', e); }
+});
 </script>
 
 <script>
@@ -557,7 +573,31 @@ function fmtDateLabel(k){const[y,m,d]=k.split('-');const days=['일','월','화'
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 // 헤더
-function updateHeaderDate(){const n=new Date();const days=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];document.getElementById('header-date').textContent=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일 ${days[n.getDay()]}`;}
+function updateHeaderDate(){
+  const n=new Date();
+  const days=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  document.getElementById('header-date').textContent=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일 ${days[n.getDay()]}`;
+  renderHeaderEvents();
+}
+
+function renderHeaderEvents(){
+  const today=todayStr();
+  const evs=(state.events[today]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
+  const todos=(state.todos[today]||[]).filter(t=>!t.evId&&!t.done);
+  const wrap=document.getElementById('header-today-events');
+  if(!wrap)return;
+  if(!evs.length&&!todos.length){
+    wrap.innerHTML='<span class="header-no-events">오늘 일정 없음</span>';return;
+  }
+  let html='<div class="header-today-label">오늘</div><div class="header-ev-chips">';
+  evs.slice(0,3).forEach(ev=>{html+=`<span class="header-ev-chip ev">📅 ${ev.time?ev.time+' ':''}${ev.title}</span>`;});
+  todos.slice(0,2).forEach(t=>{html+=`<span class="header-ev-chip todo">✅ ${t.title}</span>`;});
+  const more=(evs.length+todos.length)-5;
+  if(more>0)html+=`<span class="header-ev-chip ev">+${more}개</span>`;
+  html+='</div>';
+  wrap.innerHTML=html;
+}
+
 updateHeaderDate();
 
 // 탭
@@ -595,6 +635,7 @@ function renderCal(){
   const rem=42-first-last;
   for(let i=1;i<=rem;i++){const dow=new Date(y,m+1,i).getDay();addDayCell(grid,i,dateKey(y,m+1,i),true,false,false,dow);}
   renderSidePanel();
+  renderHeaderEvents();
 }
 
 function addDayCell(grid,d,k,other,isToday,isSel,dow){
@@ -616,19 +657,45 @@ function addDayCell(grid,d,k,other,isToday,isSel,dow){
 function renderSidePanel(){
   document.getElementById('side-date-label').textContent=fmtDateLabel(selDate);
   const list=document.getElementById('event-list');list.innerHTML='';
-  const evs=state.events[selDate]||[];
-  if(!evs.length){list.innerHTML='<div class="empty">일정이 없어요<br>아래에서 추가해 보세요</div>';return;}
-  [...evs].sort((a,b)=>a.time.localeCompare(b.time)).forEach(ev=>{
-    const el=document.createElement('div');el.className='event-item';
-    el.innerHTML=`<div class="event-time">🕐 ${ev.time||'시간 미정'}</div><div class="event-title-text" contenteditable="false">${ev.title}</div><button class="event-del" onclick="delEvent('${ev.id}')">×</button>`;
-    const titleEl=el.querySelector('.event-title-text');
-    titleEl.ondblclick=()=>{
-      titleEl.contentEditable='true';titleEl.focus();
-      titleEl.onblur=()=>{const nv=titleEl.textContent.trim();if(nv){const idx=(state.events[selDate]||[]).findIndex(e=>e.id===ev.id);if(idx>-1){state.events[selDate][idx].title=nv;syncTodoTitle(selDate,ev.id,nv);save();renderCal();if(document.getElementById('view-week').classList.contains('active'))renderWeek();}}titleEl.contentEditable='false';};
-      titleEl.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();titleEl.blur();}};
-    };
-    list.appendChild(el);
-  });
+  const evs=(state.events[selDate]||[]).slice().sort((a,b)=>a.time.localeCompare(b.time));
+  const todos=(state.todos[selDate]||[]).filter(t=>!t.evId);
+
+  // 일정 섹션
+  if(evs.length){
+    const secLabel=document.createElement('div');
+    secLabel.style.cssText='font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.06em;margin-bottom:5px;margin-top:2px';
+    secLabel.textContent='📅 일정';
+    list.appendChild(secLabel);
+    evs.forEach(ev=>{
+      const el=document.createElement('div');el.className='event-item';
+      el.innerHTML=`<div class="event-time">🕐 ${ev.time||'시간 미정'}</div><div class="event-title-text" contenteditable="false">${ev.title}</div><button class="event-del" onclick="delEvent('${ev.id}')">×</button>`;
+      const titleEl=el.querySelector('.event-title-text');
+      titleEl.ondblclick=()=>{
+        titleEl.contentEditable='true';titleEl.focus();
+        titleEl.onblur=()=>{const nv=titleEl.textContent.trim();if(nv){const idx=(state.events[selDate]||[]).findIndex(e=>e.id===ev.id);if(idx>-1){state.events[selDate][idx].title=nv;syncTodoTitle(selDate,ev.id,nv);save();renderCal();if(document.getElementById('view-week').classList.contains('active'))renderWeek();}}titleEl.contentEditable='false';};
+        titleEl.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();titleEl.blur();}};
+      };
+      list.appendChild(el);
+    });
+  }
+
+  // 투두 섹션
+  if(todos.length){
+    const secLabel=document.createElement('div');
+    secLabel.style.cssText='font-size:10px;font-weight:700;color:var(--green2);letter-spacing:0.06em;margin-bottom:5px;margin-top:8px';
+    secLabel.textContent='✅ 할 일';
+    list.appendChild(secLabel);
+    todos.forEach(todo=>{
+      const el=document.createElement('div');
+      el.style.cssText=`background:var(--bg);border-radius:8px;padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--green);display:flex;align-items:center;gap:8px;${todo.done?'opacity:0.5':''}`;
+      el.innerHTML=`<input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;flex-shrink:0;cursor:pointer" ${todo.done?'checked':''} onchange="toggleTodo('${selDate}','${todo.id}',this.checked);renderSidePanel()"><span style="font-size:13px;font-weight:500;${todo.done?'text-decoration:line-through;color:var(--text3)':''}">${todo.title}</span>`;
+      list.appendChild(el);
+    });
+  }
+
+  if(!evs.length && !todos.length){
+    list.innerHTML='<div class="empty">일정이 없어요<br>아래에서 추가해 보세요</div>';
+  }
 }
 
 function addEvent(){
@@ -1035,8 +1102,7 @@ requestNotifyPermission();
 scheduleAlarms();
 setInterval(scheduleAlarms,60*1000);
 
-// Firebase 초기화
-if(window._fbInit) window._fbInit();
+// Firebase는 window load 이벤트에서 자동 초기화됨
 
 // PWA Service Worker 등록
 if('serviceWorker' in navigator){
