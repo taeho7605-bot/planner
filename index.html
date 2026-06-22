@@ -181,6 +181,47 @@
   .pomo-session-dots{display:flex;gap:4px;justify-content:center;margin-bottom:10px;min-height:12px}
   .session-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:0.9}
 
+  /* ===== 루틴 트래커 ===== */
+  #view-routine{flex-direction:column;gap:20px}
+  .routine-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .routine-top h2{font-size:15px;font-weight:600}
+  .routine-date-label{font-size:12px;color:var(--text2)}
+  .routine-sections{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:600px){.routine-sections{grid-template-columns:1fr}}
+  .routine-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .routine-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .routine-sec-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .routine-sec-pct{font-size:12px;font-weight:600;color:var(--accent);background:rgba(83,74,183,0.1);padding:2px 8px;border-radius:99px}
+  .routine-sec-pct.done{color:var(--green);background:rgba(29,158,117,0.1)}
+  .routine-items{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .routine-item{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--bg);border-radius:8px;border:1px solid var(--border);transition:all 0.15s;position:relative}
+  .routine-item.checked{background:rgba(83,74,183,0.05);border-color:rgba(83,74,183,0.2)}
+  .routine-check{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+  .routine-item-text{flex:1;font-size:13px;color:var(--text);font-weight:500;outline:none;cursor:text;border-radius:3px;padding:1px 2px}
+  .routine-item-text[contenteditable="true"]{background:var(--bg2);border:1px solid var(--accent);border-radius:4px;padding:2px 6px}
+  .routine-item.checked .routine-item-text{text-decoration:line-through;color:var(--text3)}
+  .routine-del{background:none;border:none;cursor:pointer;font-size:15px;color:var(--text3);padding:0 2px;line-height:1;opacity:0;transition:opacity 0.1s;flex-shrink:0}
+  .routine-item:hover .routine-del{opacity:1}
+  .routine-del:hover{color:var(--red)}
+  .routine-add-row{display:flex;gap:6px}
+  .routine-add-row .inp{flex:1;font-size:12px;padding:7px 10px}
+  .routine-add-btn{padding:7px 11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0}
+  .routine-add-btn:hover{background:var(--accent2)}
+
+  /* 잔디밭 */
+  .routine-grass-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .routine-grass-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+  .routine-grass-sub{font-size:11px;color:var(--text3);font-weight:400}
+  .grass-grid{display:flex;gap:3px;flex-wrap:wrap}
+  .grass-cell{width:14px;height:14px;border-radius:3px;background:var(--border);cursor:default;transition:background 0.2s;position:relative}
+  .grass-cell:hover::after{content:attr(data-label);position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);font-size:10px;padding:3px 7px;border-radius:4px;white-space:nowrap;z-index:10;pointer-events:none}
+  .grass-cell.g1{background:rgba(83,74,183,0.2)}
+  .grass-cell.g2{background:rgba(83,74,183,0.45)}
+  .grass-cell.g3{background:rgba(83,74,183,0.7)}
+  .grass-cell.g4{background:var(--accent)}
+  .grass-legend{display:flex;align-items:center;gap:5px;margin-top:8px;justify-content:flex-end;font-size:10px;color:var(--text3)}
+  .grass-legend-cell{width:12px;height:12px;border-radius:2px}
+
   /* 토스트 */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;display:none;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.15)}
   .toast.show{display:block;animation:slideup 0.25s ease}
@@ -201,6 +242,7 @@
       <button class="tab active" onclick="showTab('cal')">📅 월간 캘린더</button>
       <button class="tab" onclick="showTab('week')">📆 주간 캘린더</button>
       <button class="tab" onclick="showTab('todo')">✅ 투두 + 포모도로</button>
+      <button class="tab" onclick="showTab('routine')">🌱 루틴 트래커</button>
     </div>
 
     <!-- 월간 캘린더 -->
@@ -298,6 +340,54 @@
   </div>
 </div>
 
+    <!-- 루틴 트래커 -->
+    <div class="view" id="view-routine">
+      <div class="routine-top">
+        <h2>🌱 루틴 트래커</h2>
+        <span class="routine-date-label" id="routine-date-label"></span>
+      </div>
+      <div class="routine-sections">
+        <div class="routine-section">
+          <div class="routine-sec-header">
+            <div class="routine-sec-title">🌅 모닝 루틴</div>
+            <span class="routine-sec-pct" id="morning-pct">0%</span>
+          </div>
+          <div class="routine-items" id="morning-items"></div>
+          <div class="routine-add-row">
+            <input type="text" class="inp" id="morning-inp" placeholder="항목 추가..." onkeydown="if(event.key==='Enter')addRoutineItem('morning')">
+            <button class="routine-add-btn" onclick="addRoutineItem('morning')">＋</button>
+          </div>
+        </div>
+        <div class="routine-section">
+          <div class="routine-sec-header">
+            <div class="routine-sec-title">🌙 나이트 루틴</div>
+            <span class="routine-sec-pct" id="night-pct">0%</span>
+          </div>
+          <div class="routine-items" id="night-items"></div>
+          <div class="routine-add-row">
+            <input type="text" class="inp" id="night-inp" placeholder="항목 추가..." onkeydown="if(event.key==='Enter')addRoutineItem('night')">
+            <button class="routine-add-btn" onclick="addRoutineItem('night')">＋</button>
+          </div>
+        </div>
+      </div>
+      <div class="routine-grass-wrap">
+        <div class="routine-grass-title">
+          <span>📊 이번 달 달성률</span>
+          <span class="routine-grass-sub" id="grass-sub"></span>
+        </div>
+        <div class="grass-grid" id="grass-grid"></div>
+        <div class="grass-legend">
+          낮음
+          <div class="grass-legend-cell" style="background:var(--border)"></div>
+          <div class="grass-legend-cell g1"></div>
+          <div class="grass-legend-cell g2"></div>
+          <div class="grass-legend-cell g3"></div>
+          <div class="grass-legend-cell g4"></div>
+          높음
+        </div>
+      </div>
+    </div>
+
 <!-- 일정 추가 모달 (주간뷰용) -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -325,9 +415,17 @@
 
 <script>
 const STORE_KEY = 'taeho_planner_v3';
-let state = { events:{}, todos:{}, pomo:{count:0,totalMin:0,sessionDots:0} };
+let state = { events:{}, todos:{}, pomo:{count:0,totalMin:0,sessionDots:0}, routine:{
+  morning:{ items:[
+    {id:'m1',text:'성경 읽기'},{id:'m2',text:'운동'},{id:'m3',text:'오늘 계획 확인'},{id:'m4',text:'복습'}
+  ]},
+  night:{ items:[
+    {id:'n1',text:'투두 이행률 확인'},{id:'n2',text:'내일 계획 작성'},{id:'n3',text:'감사 한 줄 일기'},{id:'n4',text:'취침 준비'}
+  ]},
+  checks:{} // { 'YYYY-MM-DD': { morning:['id1','id2'], night:['id1'] } }
+}};
 function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch(e){}}
-function load(){try{const d=localStorage.getItem(STORE_KEY);if(d)state=Object.assign({events:{},todos:{},pomo:{count:0,totalMin:0,sessionDots:0}},JSON.parse(d));}catch(e){}}
+function load(){try{const d=localStorage.getItem(STORE_KEY);if(d){const p=JSON.parse(d);state=Object.assign({events:{},todos:{},pomo:{count:0,totalMin:0,sessionDots:0},routine:{morning:{items:[{id:'m1',text:'성경 읽기'},{id:'m2',text:'운동'},{id:'m3',text:'오늘 계획 확인'},{id:'m4',text:'복습'}]},night:{items:[{id:'n1',text:'투두 이행률 확인'},{id:'n2',text:'내일 계획 작성'},{id:'n3',text:'감사 한 줄 일기'},{id:'n4',text:'취침 준비'}]},checks:{}}},p);}}catch(e){}}
 load();
 
 function todayStr(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;}
@@ -342,19 +440,20 @@ updateHeaderDate();
 // 탭
 function showTab(t){
   const tabs=document.querySelectorAll('.tab');
-  const map=['cal','week','todo'];
+  const map=['cal','week','todo','routine'];
   tabs.forEach((b,i)=>b.classList.toggle('active',map[i]===t));
-  ['view-cal','view-week','view-todo'].forEach(id=>{
+  ['view-cal','view-week','view-todo','view-routine'].forEach(id=>{
     const el=document.getElementById(id);
     el.classList.toggle('active',id===`view-${t}`);
-    el.style.display=id===`view-${t}`?(t==='week'?'flex':'flex'):'none';
+    el.style.display=id===`view-${t}`?'flex':'none';
   });
   if(t==='week'){renderWeek();}
   if(t==='todo'){renderTodoDateOpts();renderTodoList();}
+  if(t==='routine'){renderRoutine();}
 }
-// 초기 숨김 처리
 document.getElementById('view-week').style.display='none';
 document.getElementById('view-todo').style.display='none';
+document.getElementById('view-routine').style.display='none';
 
 // ===== 월간 캘린더 =====
 let curYear=new Date().getFullYear(),curMonth=new Date().getMonth();
@@ -590,16 +689,190 @@ function updateProgress(todos){
 
 // ===== 포모도로 =====
 const CIRCUM=314;
-let pomo={running:false,remaining:25*60,total:25*60,type:'집중 세션',interval:null};
-function setPreset(min,type,btn){if(pomo.running)return;document.querySelectorAll('.pomo-preset').forEach(b=>b.classList.remove('active'));btn.classList.add('active');pomo.remaining=min*60;pomo.total=min*60;pomo.type=type;renderPomoUI();}
-function togglePomo(){
-  if(pomo.running){clearInterval(pomo.interval);pomo.running=false;document.getElementById('pomo-icon').textContent='▶';document.getElementById('pomo-btn-text').textContent='계속';}
-  else{pomo.running=true;document.getElementById('pomo-icon').textContent='⏸';document.getElementById('pomo-btn-text').textContent='일시정지';
-    pomo.interval=setInterval(()=>{pomo.remaining--;if(pomo.remaining<=0){clearInterval(pomo.interval);pomo.running=false;pomo.remaining=0;document.getElementById('pomo-icon').textContent='▶';document.getElementById('pomo-btn-text').textContent='시작';if(pomo.type==='집중 세션'){state.pomo.count++;state.pomo.totalMin+=Math.round(pomo.total/60);state.pomo.sessionDots=(state.pomo.sessionDots||0)+1;save();updateStats();showToast('🎉 집중 세션 완료! 잠깐 쉬어가요');}else{showToast('휴식 끝! 다시 집중해 볼까요?');}renderPomoUI();}else{renderPomoUI();}},1000);}
+let pomo={running:false,remaining:25*60,total:25*60,type:'집중 세션',interval:null,startedAt:null,startedRemaining:25*60};
+
+function getTodayPomo(){
+  const today=todayStr();
+  if(!state.pomoDaily)state.pomoDaily={};
+  if(!state.pomoDaily[today])state.pomoDaily[today]={count:0,totalMin:0,sessionDots:0};
+  return state.pomoDaily[today];
 }
-function resetPomo(){clearInterval(pomo.interval);pomo.running=false;pomo.remaining=pomo.total;document.getElementById('pomo-icon').textContent='▶';document.getElementById('pomo-btn-text').textContent='시작';renderPomoUI();}
-function renderPomoUI(){const m=Math.floor(pomo.remaining/60),s=pomo.remaining%60;document.getElementById('pomo-display').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;document.getElementById('pomo-type-label').textContent=pomo.type;const pct=pomo.remaining/pomo.total;document.getElementById('pomo-fill').style.strokeDashoffset=CIRCUM*(1-pct);document.getElementById('pomo-fill').style.stroke=pomo.type==='집중 세션'?'var(--accent)':'var(--green)';}
-function updateStats(){document.getElementById('stat-count').textContent=`${state.pomo.count}회`;const h=Math.floor(state.pomo.totalMin/60),min=state.pomo.totalMin%60;document.getElementById('stat-time').textContent=h>0?`${h}시간 ${min}분`:`${min}분`;const dots=document.getElementById('session-dots');dots.innerHTML='';const n=Math.min(state.pomo.sessionDots||0,8);for(let i=0;i<n;i++){const d=document.createElement('div');d.className='session-dot';dots.appendChild(d);}}
+
+function setPreset(min,type,btn){
+  if(pomo.running)return;
+  document.querySelectorAll('.pomo-preset').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  pomo.remaining=min*60;pomo.total=min*60;pomo.type=type;
+  renderPomoUI();
+}
+
+function togglePomo(){
+  if(pomo.running){
+    // 일시정지 — 지금까지 경과 시간 반영해서 remaining 업데이트
+    const elapsed=Math.floor((Date.now()-pomo.startedAt)/1000);
+    pomo.remaining=Math.max(0, pomo.startedRemaining - elapsed);
+    clearInterval(pomo.interval);pomo.running=false;pomo.startedAt=null;
+    document.getElementById('pomo-icon').textContent='▶';
+    document.getElementById('pomo-btn-text').textContent='계속';
+    renderPomoUI();
+  } else {
+    // 시작 — 현재 시각 저장
+    pomo.startedAt=Date.now();
+    pomo.startedRemaining=pomo.remaining;
+    pomo.running=true;
+    document.getElementById('pomo-icon').textContent='⏸';
+    document.getElementById('pomo-btn-text').textContent='일시정지';
+    pomo.interval=setInterval(()=>{
+      // 실제 경과 시간으로 계산
+      const elapsed=Math.floor((Date.now()-pomo.startedAt)/1000);
+      const remaining=Math.max(0, pomo.startedRemaining - elapsed);
+      pomo.remaining=remaining;
+      if(remaining<=0){
+        clearInterval(pomo.interval);pomo.running=false;pomo.startedAt=null;
+        document.getElementById('pomo-icon').textContent='▶';
+        document.getElementById('pomo-btn-text').textContent='시작';
+        if(pomo.type==='집중 세션'){
+          const td=getTodayPomo();
+          td.count++;
+          td.totalMin+=Math.round(pomo.total/60);
+          td.sessionDots=(td.sessionDots||0)+1;
+          save();updateStats();
+          showToast('🎉 집중 세션 완료! 잠깐 쉬어가요');
+          sendNotification('🎉 포모도로 완료!',`${Math.round(pomo.total/60)}분 집중 세션 완료! 잠깐 쉬어가요.`);
+        } else {
+          showToast('휴식 끝! 다시 집중해 볼까요?');
+          sendNotification('⏰ 휴식 종료','다시 집중 세션을 시작해 봐요!');
+        }
+        renderPomoUI();
+      } else {
+        renderPomoUI();
+      }
+    }, 500); // 0.5초마다 갱신 — 더 정확하게
+  }
+}
+
+function resetPomo(){
+  clearInterval(pomo.interval);pomo.running=false;pomo.startedAt=null;
+  pomo.remaining=pomo.total;
+  document.getElementById('pomo-icon').textContent='▶';
+  document.getElementById('pomo-btn-text').textContent='시작';
+  renderPomoUI();
+}
+
+function renderPomoUI(){
+  const m=Math.floor(pomo.remaining/60),s=pomo.remaining%60;
+  document.getElementById('pomo-display').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('pomo-type-label').textContent=pomo.type;
+  const pct=pomo.remaining/pomo.total;
+  document.getElementById('pomo-fill').style.strokeDashoffset=CIRCUM*(1-pct);
+  document.getElementById('pomo-fill').style.stroke=pomo.type==='집중 세션'?'var(--accent)':'var(--green)';
+}
+
+function updateStats(){
+  const td=getTodayPomo();
+  document.getElementById('stat-count').textContent=`${td.count}회`;
+  const h=Math.floor(td.totalMin/60),min=td.totalMin%60;
+  document.getElementById('stat-time').textContent=h>0?`${h}시간 ${min}분`:`${min}분`;
+  const dots=document.getElementById('session-dots');dots.innerHTML='';
+  const n=Math.min(td.sessionDots||0,8);
+  for(let i=0;i<n;i++){const d=document.createElement('div');d.className='session-dot';dots.appendChild(d);}
+}
+
+// ===== 루틴 트래커 =====
+function renderRoutine(){
+  const today=todayStr();
+  const[y,m,d]=today.split('-');
+  const days=['일','월','화','수','목','금','토'];
+  const dow=new Date(+y,+m-1,+d).getDay();
+  document.getElementById('routine-date-label').textContent=`${parseInt(m)}월 ${parseInt(d)}일 (${days[dow]})`;
+  renderRoutineSection('morning');
+  renderRoutineSection('night');
+  renderGrass();
+}
+
+function renderRoutineSection(sec){
+  const today=todayStr();
+  if(!state.routine.checks[today])state.routine.checks[today]={morning:[],night:[]};
+  const checks=state.routine.checks[today][sec]||[];
+  const items=state.routine[sec].items||[];
+  const container=document.getElementById(`${sec}-items`);
+  container.innerHTML='';
+  items.forEach(item=>{
+    const isChecked=checks.includes(item.id);
+    const el=document.createElement('div');
+    el.className='routine-item'+(isChecked?' checked':'');
+    el.innerHTML=`
+      <input type="checkbox" class="routine-check" ${isChecked?'checked':''} onchange="toggleRoutine('${sec}','${item.id}',this.checked)">
+      <span class="routine-item-text" ondblclick="editRoutineItem(this,'${sec}','${item.id}')">${item.text}</span>
+      <button class="routine-del" onclick="delRoutineItem('${sec}','${item.id}')">×</button>`;
+    container.appendChild(el);
+  });
+  const done=checks.filter(id=>items.find(i=>i.id===id)).length;
+  const total=items.length;
+  const pct=total===0?0:Math.round(done/total*100);
+  const pctEl=document.getElementById(`${sec}-pct`);
+  pctEl.textContent=`${pct}%`;
+  pctEl.className='routine-sec-pct'+(pct===100?' done':'');
+}
+
+function toggleRoutine(sec,id,v){
+  const today=todayStr();
+  if(!state.routine.checks[today])state.routine.checks[today]={morning:[],night:[]};
+  if(!state.routine.checks[today][sec])state.routine.checks[today][sec]=[];
+  if(v){if(!state.routine.checks[today][sec].includes(id))state.routine.checks[today][sec].push(id);}
+  else{state.routine.checks[today][sec]=state.routine.checks[today][sec].filter(x=>x!==id);}
+  save();renderRoutineSection(sec);renderGrass();
+}
+
+function addRoutineItem(sec){
+  const inp=document.getElementById(`${sec}-inp`);
+  const v=inp.value.trim();if(!v)return;
+  const id=uid();
+  state.routine[sec].items.push({id,text:v});
+  inp.value='';save();renderRoutineSection(sec);
+}
+
+function delRoutineItem(sec,id){
+  state.routine[sec].items=state.routine[sec].items.filter(i=>i.id!==id);
+  Object.keys(state.routine.checks).forEach(k=>{if(state.routine.checks[k][sec])state.routine.checks[k][sec]=state.routine.checks[k][sec].filter(x=>x!==id);});
+  save();renderRoutineSection(sec);renderGrass();
+}
+
+function editRoutineItem(el,sec,id){
+  const orig=el.textContent;el.contentEditable='true';el.focus();
+  el.onblur=()=>{const nv=el.textContent.trim()||orig;const item=state.routine[sec].items.find(i=>i.id===id);if(item)item.text=nv;el.contentEditable='false';save();renderRoutineSection(sec);};
+  el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();el.blur();}if(e.key==='Escape'){el.textContent=orig;el.blur();}};
+}
+
+function renderGrass(){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const today=todayStr();
+  const grid=document.getElementById('grass-grid');
+  grid.innerHTML='';
+  let totalPct=0,counted=0;
+  for(let d=1;d<=daysInMonth;d++){
+    const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const checks=state.routine.checks[k]||{morning:[],night:[]};
+    const mItems=state.routine.morning.items.length;
+    const nItems=state.routine.night.items.length;
+    const mDone=(checks.morning||[]).filter(id=>state.routine.morning.items.find(i=>i.id===id)).length;
+    const nDone=(checks.night||[]).filter(id=>state.routine.night.items.find(i=>i.id===id)).length;
+    const total=mItems+nItems;
+    const done=mDone+nDone;
+    const pct=total===0?0:Math.round(done/total*100);
+    if(k<=today){totalPct+=pct;counted++;}
+    const cell=document.createElement('div');
+    cell.className='grass-cell'+(pct===0?'':(pct<30?' g1':pct<60?' g2':pct<100?' g3':' g4'));
+    const isFuture=k>today;
+    if(isFuture)cell.style.opacity='0.3';
+    cell.setAttribute('data-label',`${m+1}/${d} ${pct}%`);
+    grid.appendChild(cell);
+  }
+  const avg=counted>0?Math.round(totalPct/counted):0;
+  document.getElementById('grass-sub').textContent=`이번 달 평균 ${avg}%`;
+}
 
 // ===== 알림 =====
 function requestNotifyPermission(){if(!('Notification'in window))return;if(Notification.permission==='default')Notification.requestPermission();}
