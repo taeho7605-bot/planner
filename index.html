@@ -479,6 +479,54 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBmil5Hyc9KHriy8cQYBwMwEvCn-fYaSTU",
+  authDomain: "taeho-s-planer.firebaseapp.com",
+  projectId: "taeho-s-planer",
+  storageBucket: "taeho-s-planer.firebasestorage.app",
+  messagingSenderId: "162463354480",
+  appId: "1:162463354480:web:acf31fa23db64a6635eeb5"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const DOC_REF = doc(db, 'users', 'taeho');
+
+// Firestore → 로컬 동기화
+window._fbLoaded = false;
+onSnapshot(DOC_REF, (snap) => {
+  if (snap.exists()) {
+    const data = snap.data();
+    if (data && data.state) {
+      const remote = JSON.parse(data.state);
+      // 로컬보다 remote가 최신이면 덮어쓰기
+      Object.assign(state, remote);
+      if (window._fbLoaded) {
+        // 이미 렌더된 상태면 화면 갱신
+        renderCal();
+        renderTodoDateOpts();
+        updateStats();
+        if (document.getElementById('view-week').style.display !== 'none') renderWeek();
+        if (document.getElementById('view-todo').style.display !== 'none') renderTodoList();
+        if (document.getElementById('view-routine').style.display !== 'none') renderRoutine();
+      }
+    }
+  }
+  window._fbLoaded = true;
+});
+
+// save() 오버라이드 — localStorage + Firestore 동시 저장
+window._fbSave = () => {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+  setDoc(DOC_REF, { state: JSON.stringify(state) }, { merge: true }).catch(e => console.warn('FB save err', e));
+};
+</script>
+
 <script>
 const STORE_KEY = 'taeho_planner_v3';
 let state = { events:{}, todos:{}, pomo:{count:0,totalMin:0,sessionDots:0}, routine:{
@@ -490,7 +538,10 @@ let state = { events:{}, todos:{}, pomo:{count:0,totalMin:0,sessionDots:0}, rout
   ]},
   checks:{} // { 'YYYY-MM-DD': { morning:['id1','id2'], night:['id1'] } }
 }};
-function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch(e){}}
+function save(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+  if (window._fbSave) window._fbSave();
+}
 function load(){try{const d=localStorage.getItem(STORE_KEY);if(d){const p=JSON.parse(d);state=Object.assign({events:{},todos:{},pomo:{count:0,totalMin:0,sessionDots:0},routine:{morning:{items:[{id:'m1',text:'성경 읽기'},{id:'m2',text:'운동'},{id:'m3',text:'오늘 계획 확인'},{id:'m4',text:'복습'}]},night:{items:[{id:'n1',text:'투두 이행률 확인'},{id:'n2',text:'내일 계획 작성'},{id:'n3',text:'감사 한 줄 일기'},{id:'n4',text:'취침 준비'}]},checks:{}}},p);}}catch(e){}}
 load();
 
