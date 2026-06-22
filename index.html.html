@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>태호의 플래너</title>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#ffffff;--bg2:#f7f7f8;--bg3:#f0f0f2;
+    --text:#1a1a1a;--text2:#6b6b6b;--text3:#a0a0a0;
+    --border:#e0e0e0;--border2:#c8c8c8;
+    --accent:#534AB7;--accent2:#3C3489;
+    --green:#1D9E75;--red:#E24B4A;
+    --radius:10px;--radius-lg:14px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1e1e1e;--bg2:#2a2a2a;--bg3:#333333;
+      --text:#f0f0f0;--text2:#a0a0a0;--text3:#666666;
+      --border:#3a3a3a;--border2:#4a4a4a;
+    }
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+  .app{max-width:900px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:0}
+  .app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .app-title{font-size:20px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+  .app-title span{color:var(--accent)}
+  .app-date{font-size:13px;color:var(--text2)}
+
+  .card{background:var(--bg);border-radius:var(--radius-lg);border:1px solid var(--border);overflow:hidden}
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg)}
+  .tab{padding:14px 28px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;transition:all 0.15s;display:flex;align-items:center;gap:6px}
+  .tab.active{color:var(--accent);border-bottom:2px solid var(--accent)}
+  .tab:hover:not(.active){color:var(--text);background:var(--bg2)}
+  .view{display:none;padding:20px}
+  .view.active{display:flex;gap:20px}
+
+  /* 캘린더 */
+  .cal-main{flex:1;min-width:0}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .cal-nav{display:flex;align-items:center;gap:10px}
+  .cal-title{font-size:16px;font-weight:600;min-width:130px;text-align:center}
+  .cal-nav-btn{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px;color:var(--text);display:flex;align-items:center;justify-content:center;transition:background 0.1s}
+  .cal-nav-btn:hover{background:var(--bg2)}
+  .cal-nav-btn.today-btn{width:auto;padding:0 12px;font-size:12px;font-weight:500}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cal-dow{font-size:11px;color:var(--text3);text-align:center;padding:6px 0;font-weight:600;letter-spacing:0.03em}
+  .cal-dow:first-child{color:#E24B4A}
+  .cal-dow:last-child{color:var(--accent)}
+  .cal-day{min-height:64px;border-radius:8px;padding:5px;cursor:pointer;border:1px solid transparent;position:relative;transition:all 0.1s;background:var(--bg)}
+  .cal-day:hover{background:var(--bg2);border-color:var(--border)}
+  .cal-day.today .day-num{background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+  .cal-day.selected{background:var(--bg2);border-color:var(--accent)}
+  .cal-day.other-month{background:transparent}
+  .cal-day.other-month .day-num{color:var(--text3)}
+  .cal-day:first-child .day-num,.cal-day.sun .day-num{color:#E24B4A}
+  .cal-day.sat .day-num{color:var(--accent)}
+  .day-num{font-size:12px;font-weight:600;width:24px;height:24px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
+  .day-events{display:flex;flex-direction:column;gap:2px}
+  .day-ev-chip{font-size:10px;background:var(--accent);color:#fff;border-radius:3px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0.85}
+  .day-ev-more{font-size:10px;color:var(--text3);padding-left:2px}
+
+  /* 사이드 패널 */
+  .cal-side{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
+  .side-card{background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border);padding:14px}
+  .side-date-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .event-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin-bottom:10px}
+  .event-item{background:var(--bg);border-radius:8px;padding:8px 10px;cursor:pointer;border:1px solid var(--border);position:relative;transition:border-color 0.1s}
+  .event-item:hover{border-color:var(--border2)}
+  .event-time{font-size:11px;color:var(--text3);margin-bottom:2px;display:flex;align-items:center;gap:3px}
+  .event-title-text{font-size:13px;color:var(--text);font-weight:500;outline:none;cursor:text;border-radius:3px;padding:1px 2px}
+  .event-title-text[contenteditable="true"]{background:var(--bg2);border:1px solid var(--accent);border-radius:3px;padding:1px 4px}
+  .event-del{position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);display:none;padding:0 2px;line-height:1}
+  .event-item:hover .event-del{display:block}
+  .event-del:hover{color:var(--red)}
+  .add-form{display:flex;flex-direction:column;gap:7px}
+  .form-row{display:flex;gap:6px}
+  .inp{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);font-family:inherit;transition:border-color 0.15s}
+  .inp:focus{outline:none;border-color:var(--accent)}
+  .btn-primary{padding:9px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background 0.15s;font-family:inherit}
+  .btn-primary:hover{background:var(--accent2)}
+  .btn-primary:active{transform:scale(0.98)}
+  .empty{text-align:center;padding:20px 8px;color:var(--text3);font-size:12px;line-height:1.6}
+
+  /* 투두 */
+  #view-todo{align-items:flex-start}
+  .todo-section{flex:1;min-width:0}
+  .todo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .todo-header h2{font-size:15px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .date-sel{font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);cursor:pointer;font-family:inherit}
+  .todo-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-height:380px;overflow-y:auto}
+  .todo-item{display:flex;align-items:flex-start;gap:9px;padding:10px 12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);transition:opacity 0.2s}
+  .todo-item.done{opacity:0.55}
+  .todo-item.done .todo-text{text-decoration:line-through;color:var(--text3)}
+  .todo-check{width:17px;height:17px;accent-color:var(--accent);flex-shrink:0;margin-top:2px;cursor:pointer}
+  .todo-body{flex:1;min-width:0}
+  .todo-text{font-size:13px;color:var(--text);font-weight:500;outline:none;cursor:text;border-radius:3px;padding:1px 2px;display:block}
+  .todo-text[contenteditable="true"]{background:var(--bg);border:1px solid var(--accent);border-radius:4px;padding:2px 6px}
+  .todo-time{font-size:11px;color:var(--text3);margin-top:3px;display:flex;align-items:center;gap:3px}
+  .todo-from-cal{font-size:10px;color:var(--accent);background:rgba(83,74,183,0.1);border-radius:3px;padding:1px 5px;margin-left:4px}
+  .todo-del{background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);padding:0 2px;flex-shrink:0;line-height:1;transition:color 0.1s}
+  .todo-del:hover{color:var(--red)}
+  .todo-add-row{display:flex;gap:7px}
+  .todo-add-row .inp{flex:1}
+
+  /* 이행률 게이지 */
+  .progress-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+  .progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .progress-label{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+  .progress-pct{font-size:22px;font-weight:700;color:var(--accent);line-height:1}
+  .progress-pct.done{color:var(--green)}
+  .progress-sub{font-size:11px;color:var(--text3);margin-top:1px}
+  .progress-bar-bg{height:10px;background:var(--border);border-radius:99px;overflow:hidden}
+  .progress-bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width 0.5s cubic-bezier(.4,0,.2,1);min-width:0}
+  .progress-bar-fill.done{background:var(--green)}
+  .progress-msg{font-size:11px;color:var(--text3);margin-top:7px;text-align:center}
+
+  /* 포모도로 */
+  .pomo-section{width:210px;flex-shrink:0}
+  .pomo-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;text-align:center}
+  .pomo-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.08em;margin-bottom:14px}
+  .pomo-ring{position:relative;width:120px;height:120px;margin:0 auto 10px}
+  .pomo-ring svg{transform:rotate(-90deg)}
+  .ring-track{fill:none;stroke:var(--border);stroke-width:7}
+  .ring-fill{fill:none;stroke:var(--accent);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 0.8s linear,stroke 0.3s}
+  .pomo-time{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:26px;font-weight:700;color:var(--text);letter-spacing:-0.5px;font-variant-numeric:tabular-nums}
+  .pomo-type-label{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text3);white-space:nowrap}
+  .pomo-presets{display:flex;gap:5px;justify-content:center;margin-bottom:12px}
+  .pomo-preset{font-size:11px;padding:4px 9px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;color:var(--text2);font-family:inherit;transition:all 0.15s}
+  .pomo-preset.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .pomo-controls{display:flex;gap:7px;justify-content:center;margin-bottom:14px}
+  .pomo-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--bg);color:var(--text);display:flex;align-items:center;gap:5px;font-family:inherit;transition:all 0.15s}
+  .pomo-btn:hover{background:var(--bg2);border-color:var(--border2)}
+  .pomo-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .pomo-btn.primary:hover{background:var(--accent2)}
+  .pomo-btn:active{transform:scale(0.97)}
+  .divider{height:1px;background:var(--border);margin:14px 0}
+  .stat-list{display:flex;flex-direction:column;gap:7px}
+  .stat-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+  .stat-label{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px}
+  .stat-val{font-size:14px;font-weight:600;color:var(--text)}
+  .pomo-session-dots{display:flex;gap:4px;justify-content:center;margin-bottom:10px;min-height:12px}
+  .session-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:0.9}
+
+  /* 알림 토스트 */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;display:none;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.15)}
+  .toast.show{display:block;animation:slideup 0.25s ease}
+  @keyframes slideup{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+  /* 스크롤 */
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="app-header">
+    <div class="app-title"><span style="color:var(--accent)">📋</span> 태호의 플래너</div>
+    <div class="app-date" id="header-date"></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('cal')">📅 캘린더</button>
+      <button class="tab" onclick="showTab('todo')">✅ 투두 + 포모도로</button>
+    </div>
+
+    <!-- 캘린더 뷰 -->
+    <div class="view active" id="view-cal">
+      <div class="cal-main">
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="moveMonth(-1)">‹</button>
+            <span class="cal-title" id="cal-title"></span>
+            <button class="cal-nav-btn" onclick="moveMonth(1)">›</button>
+          </div>
+          <button class="cal-nav-btn today-btn" onclick="goToday()">오늘</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="cal-side">
+        <div class="side-card">
+          <div class="side-date-label">📌 <span id="side-date-label"></span></div>
+          <div class="event-list" id="event-list"></div>
+          <div class="add-form">
+            <div class="form-row">
+              <input type="time" id="ev-time" class="inp" style="flex:1">
+            </div>
+            <input type="text" id="ev-title" class="inp" placeholder="일정 내용" onkeydown="if(event.key==='Enter')addEvent()">
+            <button class="btn-primary" onclick="addEvent()">＋ 일정 추가</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 투두 + 포모도로 뷰 -->
+    <div class="view" id="view-todo">
+      <div class="todo-section">
+        <div class="todo-header">
+          <h2>☑️ 할 일 목록</h2>
+          <select class="date-sel" id="todo-date-sel" onchange="renderTodoList()"></select>
+        </div>
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-top">
+            <div class="progress-label">🎯 이행률</div>
+            <div>
+              <div class="progress-pct" id="progress-pct">0%</div>
+              <div class="progress-sub" id="progress-sub">0 / 0 완료</div>
+            </div>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+          </div>
+          <div class="progress-msg" id="progress-msg">할 일을 추가해 보세요</div>
+        </div>
+        <div class="todo-list" id="todo-list"></div>
+        <div class="todo-add-row">
+          <input type="text" id="todo-input" class="inp" placeholder="새 할 일 추가..." onkeydown="if(event.key==='Enter')addTodo()">
+          <button class="btn-primary" onclick="addTodo()">＋ 추가</button>
+        </div>
+      </div>
+      <div class="pomo-section">
+        <div class="pomo-card">
+          <div class="pomo-title">POMODORO TIMER</div>
+          <div class="pomo-ring">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle class="ring-track" cx="60" cy="60" r="50"/>
+              <circle class="ring-fill" id="pomo-fill" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="0"/>
+            </svg>
+            <div class="pomo-time" id="pomo-display">25:00</div>
+            <div class="pomo-type-label" id="pomo-type-label">집중 세션</div>
+          </div>
+          <div class="pomo-session-dots" id="session-dots"></div>
+          <div class="pomo-presets">
+            <button class="pomo-preset active" onclick="setPreset(25,'집중 세션',this)" id="preset-25">25분</button>
+            <button class="pomo-preset" onclick="setPreset(5,'단기 휴식',this)" id="preset-5">5분</button>
+            <button class="pomo-preset" onclick="setPreset(15,'장기 휴식',this)" id="preset-15">15분</button>
+          </div>
+          <div class="pomo-controls">
+            <button class="pomo-btn primary" id="pomo-start-btn" onclick="togglePomo()"><span id="pomo-icon">▶</span> <span id="pomo-btn-text">시작</span></button>
+            <button class="pomo-btn" onclick="resetPomo()" title="리셋">↺</button>
+          </div>
+          <div class="divider"></div>
+          <div class="stat-list">
+            <div class="stat-item">
+              <span class="stat-label">🔥 오늘 완료</span>
+              <span class="stat-val" id="stat-count">0회</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">⏱️ 총 집중</span>
+              <span class="stat-val" id="stat-time">0분</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'taeho_planner_v2';
+let state = { events: {}, todos: {}, pomo: { count: 0, totalMin: 0, sessionDots: 0 } };
+
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {} }
+function load() { try { const d = localStorage.getItem(STORE_KEY); if (d) state = Object.assign({ events:{}, todos:{}, pomo:{count:0,totalMin:0,sessionDots:0} }, JSON.parse(d)); } catch(e) {} }
+load();
+
+// 오늘 날짜
+function todayStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+function dateKey(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function fmtDateLabel(k) {
+  const [y,m,d] = k.split('-');
+  const days = ['일','월','화','수','목','금','토'];
+  const dow = new Date(+y, +m-1, +d).getDay();
+  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 (${days[dow]})`;
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// 헤더 날짜
+function updateHeaderDate() {
+  const n = new Date();
+  const days = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  document.getElementById('header-date').textContent = `${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일 ${days[n.getDay()]}`;
+}
+updateHeaderDate();
+
+// 탭 전환
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', i===(t==='cal'?0:1)));
+  document.getElementById('view-cal').classList.toggle('active', t==='cal');
+  document.getElementById('view-todo').classList.toggle('active', t==='todo');
+  if (t === 'todo') { renderTodoDateOpts(); renderTodoList(); }
+}
+
+// ===== 캘린더 =====
+let curYear = new Date().getFullYear(), curMonth = new Date().getMonth();
+let selDate = todayStr();
+
+function renderCal() {
+  const y = curYear, m = curMonth;
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('cal-title').textContent = `${y}년 ${months[m]}`;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  const dows = ['일','월','화','수','목','금','토'];
+  dows.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow'; el.textContent = d; grid.appendChild(el);
+  });
+  const first = new Date(y, m, 1).getDay();
+  const last = new Date(y, m+1, 0).getDate();
+  const prevLast = new Date(y, m, 0).getDate();
+  const today = todayStr();
+
+  for (let i = 0; i < first; i++) {
+    const d = prevLast - first + 1 + i;
+    const dayOfWeek = i;
+    const k = dateKey(y, m-1, d);
+    addDayCell(grid, d, k, true, false, false, dayOfWeek);
+  }
+  for (let d = 1; d <= last; d++) {
+    const k = dateKey(y, m, d);
+    const dow = new Date(y, m, d).getDay();
+    addDayCell(grid, d, k, false, k===today, k===selDate, dow);
+  }
+  const rem = 42 - first - last;
+  for (let i = 1; i <= rem; i++) {
+    const dow = new Date(y, m+1, i).getDay();
+    const k = dateKey(y, m+1, i);
+    addDayCell(grid, i, k, true, false, false, dow);
+  }
+  renderSidePanel();
+}
+
+function addDayCell(grid, d, k, other, isToday, isSel, dow) {
+  const el = document.createElement('div');
+  el.className = 'cal-day' + (other?' other-month':'') + (isToday?' today':'') + (isSel?' selected':'') + (dow===0?' sun':'') + (dow===6?' sat':'');
+  const evs = state.events[k] || [];
+  let evHTML = '';
+  const sorted = [...evs].sort((a,b) => a.time.localeCompare(b.time));
+  sorted.slice(0,2).forEach(ev => {
+    evHTML += `<div class="day-ev-chip">${ev.time ? ev.time+' ' : ''}${ev.title}</div>`;
+  });
+  if (evs.length > 2) evHTML += `<div class="day-ev-more">+${evs.length-2}개</div>`;
+  el.innerHTML = `<div class="day-num">${d}</div><div class="day-events">${evHTML}</div>`;
+  el.onclick = () => { selDate = k; renderCal(); };
+  grid.appendChild(el);
+}
+
+function renderSidePanel() {
+  document.getElementById('side-date-label').textContent = fmtDateLabel(selDate);
+  const list = document.getElementById('event-list');
+  list.innerHTML = '';
+  const evs = state.events[selDate] || [];
+  if (!evs.length) { list.innerHTML = '<div class="empty">일정이 없어요<br>아래에서 추가해 보세요</div>'; return; }
+  const sorted = [...evs].sort((a,b) => a.time.localeCompare(b.time));
+  sorted.forEach(ev => {
+    const el = document.createElement('div');
+    el.className = 'event-item';
+    el.innerHTML = `
+      <div class="event-time">🕐 ${ev.time || '시간 미정'}</div>
+      <div class="event-title-text" contenteditable="false" id="evt-${ev.id}">${ev.title}</div>
+      <button class="event-del" onclick="delEvent('${ev.id}')">×</button>`;
+    const titleEl = el.querySelector('.event-title-text');
+    titleEl.ondblclick = () => {
+      titleEl.contentEditable = 'true'; titleEl.focus();
+      titleEl.onblur = () => {
+        const nv = titleEl.textContent.trim();
+        if (nv) {
+          const idx = (state.events[selDate]||[]).findIndex(e => e.id===ev.id);
+          if (idx > -1) { state.events[selDate][idx].title = nv; syncTodoTitle(selDate, ev.id, nv); save(); renderCal(); }
+        }
+        titleEl.contentEditable = 'false';
+      };
+      titleEl.onkeydown = e => { if(e.key==='Enter'){e.preventDefault();titleEl.blur();} };
+    };
+    list.appendChild(el);
+  });
+}
+
+function addEvent() {
+  const t = document.getElementById('ev-title').value.trim();
+  const tm = document.getElementById('ev-time').value;
+  if (!t) { showToast('일정 내용을 입력해 주세요'); return; }
+  if (!state.events[selDate]) state.events[selDate] = [];
+  const id = uid();
+  state.events[selDate].push({ id, title: t, time: tm || '' });
+  document.getElementById('ev-title').value = '';
+  document.getElementById('ev-time').value = '';
+  syncTodosFromEvents(selDate);
+  save(); renderCal();
+  showToast('일정이 추가됐어요');
+}
+
+function delEvent(id) {
+  if (!confirm('이 일정을 삭제할까요?')) return;
+  state.events[selDate] = (state.events[selDate]||[]).filter(e => e.id !== id);
+  if (state.todos[selDate]) state.todos[selDate] = state.todos[selDate].filter(t => t.evId !== id);
+  save(); renderCal();
+}
+
+// ===== 투두 =====
+function syncTodosFromEvents(k) {
+  if (!state.todos[k]) state.todos[k] = [];
+  const evs = state.events[k] || [];
+  evs.forEach(ev => {
+    const exists = state.todos[k].find(t => t.evId === ev.id);
+    if (!exists) state.todos[k].push({ id: uid(), evId: ev.id, title: ev.title, time: ev.time, done: false });
+    else { exists.title = ev.title; exists.time = ev.time; }
+  });
+  save();
+}
+
+function syncTodoTitle(k, evId, newTitle) {
+  if (!state.todos[k]) return;
+  const t = state.todos[k].find(t => t.evId === evId);
+  if (t) { t.title = newTitle; save(); }
+}
+
+function renderTodoDateOpts() {
+  const sel = document.getElementById('todo-date-sel');
+  const cur = sel.value || selDate;
+  sel.innerHTML = '';
+  const dates = new Set([todayStr(), selDate, ...Object.keys(state.events), ...Object.keys(state.todos)]);
+  [...dates].sort().forEach(d => {
+    const o = document.createElement('option');
+    o.value = d;
+    const [y,mo,dd] = d.split('-');
+    o.textContent = `${y}.${mo}.${dd}`;
+    if (d === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function renderTodoList() {
+  const k = document.getElementById('todo-date-sel').value || selDate;
+  syncTodosFromEvents(k);
+  const list = document.getElementById('todo-list');
+  list.innerHTML = '';
+  const todos = state.todos[k] || [];
+  updateProgress(todos);
+  if (!todos.length) {
+    list.innerHTML = '<div class="empty">할 일이 없어요<br><small style="font-size:11px">캘린더에서 일정을 추가하면<br>자동으로 여기 나타나요</small></div>';
+    return;
+  }
+  const sorted = [...todos].sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  sorted.forEach(todo => {
+    const el = document.createElement('div');
+    el.className = 'todo-item' + (todo.done?' done':'');
+    el.innerHTML = `
+      <input type="checkbox" class="todo-check" ${todo.done?'checked':''} onchange="toggleTodo('${k}','${todo.id}',this.checked)">
+      <div class="todo-body">
+        <span class="todo-text" ondblclick="editTodo(this,'${k}','${todo.id}')">${todo.title}</span>
+        ${todo.time||todo.evId ? `<div class="todo-time">${todo.time?`🕐 ${todo.time}`:''}${todo.evId?'<span class="todo-from-cal">📅 캘린더</span>':''}</div>` : ''}
+      </div>
+      <button class="todo-del" onclick="delTodo('${k}','${todo.id}')">×</button>`;
+    list.appendChild(el);
+  });
+}
+
+function editTodo(el, k, id) {
+  const orig = el.textContent;
+  el.contentEditable = 'true'; el.focus();
+  el.onblur = () => {
+    const nv = el.textContent.trim() || orig;
+    const todo = (state.todos[k]||[]).find(t => t.id == id);
+    if (todo) {
+      todo.title = nv;
+      if (todo.evId) {
+        const ev = (state.events[k]||[]).find(e => e.id===todo.evId);
+        if (ev) { ev.title = nv; }
+      }
+    }
+    el.contentEditable = 'false';
+    save(); renderTodoList(); renderCal();
+  };
+  el.onkeydown = e => {
+    if (e.key==='Enter') { e.preventDefault(); el.blur(); }
+    if (e.key==='Escape') { el.textContent=orig; el.blur(); }
+  };
+}
+
+function toggleTodo(k, id, v) {
+  const t = (state.todos[k]||[]).find(t => t.id==id);
+  if (t) t.done = v;
+  save(); renderTodoList();
+}
+
+function delTodo(k, id) {
+  state.todos[k] = (state.todos[k]||[]).filter(t => t.id!=id);
+  save(); renderTodoList();
+}
+
+function addTodo() {
+  const inp = document.getElementById('todo-input');
+  const v = inp.value.trim(); if (!v) return;
+  const k = document.getElementById('todo-date-sel').value || selDate;
+  if (!state.todos[k]) state.todos[k] = [];
+  state.todos[k].push({ id: uid(), title: v, time: '', done: false });
+  inp.value = ''; save(); renderTodoList();
+}
+
+// ===== 캘린더 이동 =====
+function moveMonth(d) {
+  curMonth += d;
+  if (curMonth > 11) { curMonth = 0; curYear++; }
+  else if (curMonth < 0) { curMonth = 11; curYear--; }
+  renderCal();
+}
+function goToday() {
+  curYear = new Date().getFullYear(); curMonth = new Date().getMonth();
+  selDate = todayStr(); renderCal();
+}
+
+// ===== 포모도로 =====
+const CIRCUM = 314;
+let pomo = { running: false, remaining: 25*60, total: 25*60, type: '집중 세션', interval: null };
+
+function setPreset(min, type, btn) {
+  if (pomo.running) return;
+  document.querySelectorAll('.pomo-preset').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  pomo.remaining = min * 60; pomo.total = min * 60; pomo.type = type;
+  renderPomoUI();
+}
+
+function togglePomo() {
+  if (pomo.running) {
+    clearInterval(pomo.interval); pomo.running = false;
+    document.getElementById('pomo-icon').textContent = '▶';
+    document.getElementById('pomo-btn-text').textContent = '계속';
+  } else {
+    pomo.running = true;
+    document.getElementById('pomo-icon').textContent = '⏸';
+    document.getElementById('pomo-btn-text').textContent = '일시정지';
+    pomo.interval = setInterval(() => {
+      pomo.remaining--;
+      if (pomo.remaining <= 0) {
+        clearInterval(pomo.interval); pomo.running = false;
+        pomo.remaining = 0;
+        document.getElementById('pomo-icon').textContent = '▶';
+        document.getElementById('pomo-btn-text').textContent = '시작';
+        if (pomo.type === '집중 세션') {
+          state.pomo.count++;
+          state.pomo.totalMin += Math.round(pomo.total / 60);
+          state.pomo.sessionDots = (state.pomo.sessionDots || 0) + 1;
+          save(); updateStats();
+          showToast('🎉 집중 세션 완료! 잠깐 쉬어가요');
+          try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA...').play(); } catch(e) {}
+        } else {
+          showToast('휴식 끝! 다시 집중해 볼까요?');
+        }
+        renderPomoUI();
+      } else { renderPomoUI(); }
+    }, 1000);
+  }
+}
+
+function resetPomo() {
+  clearInterval(pomo.interval); pomo.running = false;
+  pomo.remaining = pomo.total;
+  document.getElementById('pomo-icon').textContent = '▶';
+  document.getElementById('pomo-btn-text').textContent = '시작';
+  renderPomoUI();
+}
+
+function renderPomoUI() {
+  const m = Math.floor(pomo.remaining / 60), s = pomo.remaining % 60;
+  document.getElementById('pomo-display').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('pomo-type-label').textContent = pomo.type;
+  const pct = pomo.remaining / pomo.total;
+  document.getElementById('pomo-fill').style.strokeDashoffset = CIRCUM * (1 - pct);
+  document.getElementById('pomo-fill').style.stroke = pomo.type === '집중 세션' ? 'var(--accent)' : 'var(--green)';
+}
+
+function updateStats() {
+  document.getElementById('stat-count').textContent = `${state.pomo.count}회`;
+  const h = Math.floor(state.pomo.totalMin / 60), min = state.pomo.totalMin % 60;
+  document.getElementById('stat-time').textContent = h > 0 ? `${h}시간 ${min}분` : `${min}분`;
+  const dots = document.getElementById('session-dots');
+  dots.innerHTML = '';
+  const n = Math.min(state.pomo.sessionDots || 0, 8);
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div'); d.className = 'session-dot'; dots.appendChild(d);
+  }
+}
+
+// 이행률 게이지
+function updateProgress(todos) {
+  const total = todos.length;
+  const done = todos.filter(t => t.done).length;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  const isDone = total > 0 && done === total;
+
+  const pctEl = document.getElementById('progress-pct');
+  const barEl = document.getElementById('progress-bar');
+  const subEl = document.getElementById('progress-sub');
+  const msgEl = document.getElementById('progress-msg');
+
+  pctEl.textContent = `${pct}%`;
+  pctEl.className = 'progress-pct' + (isDone ? ' done' : '');
+  barEl.style.width = `${pct}%`;
+  barEl.className = 'progress-bar-fill' + (isDone ? ' done' : '');
+  subEl.textContent = `${done} / ${total} 완료`;
+
+  const msgs = [
+    [0,   '아직 시작 전이에요. 첫 번째 할 일을 완료해 봐요!'],
+    [1,   '시작이 반이에요. 이 기세로 계속 가봐요!'],
+    [25,  '좋은 시작이에요! 하나씩 해나가 봐요.'],
+    [50,  '절반 왔어요! 이제 내리막이에요.'],
+    [75,  '거의 다 왔어요! 조금만 더 힘내요.'],
+    [90,  '마무리가 보여요! 끝까지 집중!'],
+    [100, '🎉 오늘 할 일 모두 완료! 수고했어요!'],
+  ];
+  const msg = msgs.slice().reverse().find(([threshold]) => pct >= threshold);
+  msgEl.textContent = total === 0 ? '할 일을 추가해 보세요' : msg[1];
+}
+
+// 토스트
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// 초기화
+renderCal();
+renderTodoDateOpts();
+updateStats();
+renderPomoUI();
+</script>
+</body>
+</html>
